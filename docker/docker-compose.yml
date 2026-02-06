@@ -1,0 +1,19 @@
+services:
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "${HOST_API_PORT:-8000}:8000"   # FastAPI
+      - "5900:5900"   # VNC
+      - "6080:6080"   # noVNC web client
+    volumes:
+      - ../data/sessions:/app/data/sessions
+      - ../data/screenshots:/app/data/screenshots
+      - ../data/logs:/app/data/logs
+    env_file:
+      - ../.env
+    environment:
+      - DISPLAY=:99
+    shm_size: "2gb"
+    restart: unless-stopped
