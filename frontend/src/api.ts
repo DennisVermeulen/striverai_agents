@@ -45,16 +45,42 @@ export interface WorkflowStep {
   element?: Record<string, string>;
 }
 
+export interface WorkflowParameter {
+  name: string;
+  label: string;
+  default: string;
+}
+
 export interface WorkflowResponse {
   name: string;
   description: string;
   start_url: string;
   recorded_at: string;
+  parameters: WorkflowParameter[];
   steps: WorkflowStep[];
 }
 
 export interface WorkflowListResponse {
   workflows: WorkflowResponse[];
+}
+
+export interface BatchRowResponse {
+  index: number;
+  parameters: Record<string, string>;
+  status: string;
+  task_id: string;
+  error: string;
+}
+
+export interface BatchResponse {
+  batch_id: string;
+  workflow_name: string;
+  status: string;
+  total: number;
+  completed: number;
+  failed: number;
+  current_index: number;
+  rows: BatchRowResponse[];
 }
 
 export interface WsEvent {
@@ -65,6 +91,14 @@ export interface WsEvent {
   status?: string;
   result?: string;
   error?: string;
+  // Batch events
+  batch_id?: string;
+  workflow_name?: string;
+  current_index?: number;
+  total?: number;
+  completed?: number;
+  failed?: number;
+  current_row?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -128,11 +162,34 @@ export const api = {
 
   getWorkflow: (name: string) => request<WorkflowResponse>(`/workflows/${name}`),
 
-  runWorkflow: (name: string, mode: "direct" | "ai" = "direct") =>
-    request<TaskResponse>(`/workflows/${name}/run?mode=${mode}`, { method: "POST" }),
+  runWorkflow: (
+    name: string,
+    mode: "direct" | "ai" = "direct",
+    parameters: Record<string, string> = {},
+  ) =>
+    request<TaskResponse>(`/workflows/${name}/run`, {
+      method: "POST",
+      body: JSON.stringify({ mode, parameters }),
+    }),
 
   deleteWorkflow: (name: string) =>
     request<{ status: string }>(`/workflows/${name}`, { method: "DELETE" }),
+
+  // Batch
+  startBatch: (
+    name: string,
+    mode: "direct" | "ai" = "direct",
+    rows: Record<string, string>[],
+  ) =>
+    request<BatchResponse>(`/workflows/${name}/batch`, {
+      method: "POST",
+      body: JSON.stringify({ mode, rows }),
+    }),
+
+  getBatch: (batchId: string) => request<BatchResponse>(`/batch/${batchId}`),
+
+  cancelBatch: (batchId: string) =>
+    request<{ status: string }>(`/batch/${batchId}/cancel`, { method: "POST" }),
 };
 
 export function connectWs(onMessage: (event: WsEvent) => void): WebSocket {

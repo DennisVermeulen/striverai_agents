@@ -4,10 +4,14 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import Response
 
+from local_agent.agent.batch import BatchRowResult, BatchState, run_batch
 from local_agent.agent.loop import TaskState, run_agent_loop
 from local_agent.agent.replay import run_workflow_direct
 from local_agent.agent.workflow import Workflow, process_raw_events
 from local_agent.api.models import (
+    BatchResponse,
+    BatchRowResponse,
+    BatchRunRequest,
     ConfigResponse,
     ConfigUpdateRequest,
     HealthResponse,
@@ -18,7 +22,9 @@ from local_agent.api.models import (
     TaskStatus,
     TaskStatusResponse,
     WorkflowListResponse,
+    WorkflowParameterResponse,
     WorkflowResponse,
+    WorkflowRunRequest,
     WorkflowStepResponse,
 )
 from local_agent.browser.manager import BrowserManager
@@ -40,6 +46,21 @@ def _screenshot(request: Request) -> ScreenshotCapture:
 
 def _tasks(request: Request) -> dict[str, TaskState]:
     return request.app.state.tasks
+
+
+def _batches(request: Request) -> dict[str, BatchState]:
+    return request.app.state.batches
+
+
+def _is_busy(request: Request) -> bool:
+    """Check if any task or batch is currently running."""
+    tasks = _tasks(request)
+    if any(t.status == TaskStatus.running for t in tasks.values()):
+        return True
+    batches = _batches(request)
+    if any(b.status == "running" for b in batches.values()):
+        return True
+    return False
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -72,13 +93,10 @@ async def session_save(request: Request) -> dict:
 
 @router.post("/task", response_model=TaskResponse)
 async def create_task(request: Request, body: TaskRequest) -> TaskResponse:
+    if _is_busy(request):
+        raise HTTPException(status_code=409, detail="A task or batch is already running")
+
     tasks = _tasks(request)
-
-    # Only one task at a time
-    running = [t for t in tasks.values() if t.status == TaskStatus.running]
-    if running:
-        raise HTTPException(status_code=409, detail="A task is already running")
-
     task_id = uuid.uuid4().hex[:12]
     task = TaskState(task_id=task_id, instruction=body.instruction)
     tasks[task_id] = task
@@ -242,20 +260,41 @@ async def preview_workflow(name: str) -> dict:
 
 
 @router.post("/workflows/{name}/run", response_model=TaskResponse)
-async def run_workflow(request: Request, name: str, mode: str = "direct") -> TaskResponse:
-    """Run a workflow. mode=direct (default, free) or mode=ai (uses LLM)."""
+async def run_workflow(request: Request, name: str, body: WorkflowRunRequest | None = None) -> TaskResponse:
+    """Run a workflow. mode=direct (default, free) or mode=ai (uses LLM).
+
+    Parameters in the body are resolved into {{var}} placeholders in step text/url.
+    """
     try:
         workflow = Workflow.load(name)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Workflow '{name}' not found")
 
+    if body is None:
+        body = WorkflowRunRequest()
+
+    # Resolve parameters if the workflow has any
+    if workflow.parameters and body.parameters:
+        try:
+            workflow = workflow.resolve(body.parameters)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+    elif workflow.parameters:
+        # Check if there are required params without defaults
+        required = [p.name for p in workflow.parameters if not p.default]
+        if required:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Missing required parameters: {', '.join(required)}",
+            )
+        # All params have defaults — resolve with empty dict
+        workflow = workflow.resolve({})
+
+    if _is_busy(request):
+        raise HTTPException(status_code=409, detail="A task or batch is already running")
+
     tasks = _tasks(request)
-
-    # Only one task at a time
-    running = [t for t in tasks.values() if t.status == TaskStatus.running]
-    if running:
-        raise HTTPException(status_code=409, detail="A task is already running")
-
+    mode = body.mode
     instruction = workflow.to_instruction() if mode == "ai" else f"Replay workflow: {workflow.name}"
     task_id = uuid.uuid4().hex[:12]
     task = TaskState(task_id=task_id, instruction=instruction)
@@ -290,12 +329,118 @@ async def delete_workflow(name: str) -> dict:
     return {"status": "ok", "name": name}
 
 
+# --- Batch endpoints ---
+
+
+@router.post("/workflows/{name}/batch", response_model=BatchResponse)
+async def start_batch(request: Request, name: str, body: BatchRunRequest) -> BatchResponse:
+    """Start a batch run of a workflow with multiple parameter sets."""
+    try:
+        workflow = Workflow.load(name)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Workflow '{name}' not found")
+
+    if _is_busy(request):
+        raise HTTPException(status_code=409, detail="A task or batch is already running")
+
+    # Validate that all rows have the required parameters
+    param_names = {p.name for p in workflow.parameters}
+    required = {p.name for p in workflow.parameters if not p.default}
+    for i, row in enumerate(body.rows):
+        missing = required - set(row.keys())
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Row {i + 1} missing required parameters: {', '.join(missing)}",
+            )
+
+    batch_id = uuid.uuid4().hex[:12]
+    batch = BatchState(
+        batch_id=batch_id,
+        workflow_name=name,
+        mode=body.mode,
+        rows=body.rows,
+        results=[
+            BatchRowResult(index=i, parameters=row)
+            for i, row in enumerate(body.rows)
+        ],
+    )
+
+    batches = _batches(request)
+    batches[batch_id] = batch
+
+    bm = _browser(request)
+    sc = _screenshot(request)
+    tasks = _tasks(request)
+
+    asyncio.create_task(run_batch(batch, workflow, bm, sc, tasks))
+
+    return _batch_to_response(batch)
+
+
+@router.get("/batch/{batch_id}", response_model=BatchResponse)
+async def get_batch(request: Request, batch_id: str) -> BatchResponse:
+    batches = _batches(request)
+    batch = batches.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    return _batch_to_response(batch)
+
+
+@router.post("/batch/{batch_id}/cancel")
+async def cancel_batch(request: Request, batch_id: str) -> dict:
+    batches = _batches(request)
+    batch = batches.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    batch.cancel()
+    # Also cancel the currently running task if any
+    if batch.results and 0 <= batch.current_index < len(batch.results):
+        current = batch.results[batch.current_index]
+        if current.task_id:
+            tasks = _tasks(request)
+            task = tasks.get(current.task_id)
+            if task:
+                task.cancel()
+    return {"status": "ok", "batch_id": batch_id}
+
+
+def _batch_to_response(batch: BatchState) -> BatchResponse:
+    return BatchResponse(
+        batch_id=batch.batch_id,
+        workflow_name=batch.workflow_name,
+        status=batch.status,
+        total=len(batch.rows),
+        completed=batch.completed_count,
+        failed=batch.failed_count,
+        current_index=batch.current_index,
+        rows=[
+            BatchRowResponse(
+                index=r.index,
+                parameters=r.parameters,
+                status=r.status,
+                task_id=r.task_id,
+                error=r.error,
+            )
+            for r in batch.results
+        ],
+    )
+
+
 def _workflow_to_response(workflow: Workflow) -> WorkflowResponse:
     return WorkflowResponse(
         name=workflow.name,
         description=workflow.description,
         start_url=workflow.start_url,
         recorded_at=workflow.recorded_at,
+        parameters=[
+            WorkflowParameterResponse(
+                name=p.name,
+                label=p.label,
+                default=p.default,
+            )
+            for p in workflow.parameters
+        ],
         steps=[
             WorkflowStepResponse(
                 action=s.action,
