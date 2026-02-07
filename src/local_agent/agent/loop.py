@@ -89,8 +89,20 @@ async def run_agent_loop(
         try:
             response = await llm.send(messages, system=SYSTEM_PROMPT)
         except Exception as exc:
+            if task.is_cancelled:
+                task.status = TaskStatus.cancelled
+                task.result = f"Cancelled after {step} steps"
+                await _broadcast_status(task)
+                return
             task.status = TaskStatus.failed
             task.error = f"LLM error: {exc}"
+            await _broadcast_status(task)
+            return
+
+        # Check cancel after LLM call
+        if task.is_cancelled:
+            task.status = TaskStatus.cancelled
+            task.result = f"Cancelled after {step} steps"
             await _broadcast_status(task)
             return
 
@@ -110,6 +122,13 @@ async def run_agent_loop(
         tool_results: list[dict] = []
 
         for action in response.actions:
+            # Check cancel before each action
+            if task.is_cancelled:
+                task.status = TaskStatus.cancelled
+                task.result = f"Cancelled after {step} steps"
+                await _broadcast_status(task)
+                return
+
             task.current_action = f"{action.action}"
             task.steps_completed = step + 1
             await _broadcast_status(task)

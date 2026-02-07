@@ -25,7 +25,7 @@ async def broadcast(event: dict) -> None:
     _clients.difference_update(disconnected)
 
 
-@router.websocket("/ws")
+@router.websocket("/ws")  # mounted at /api/ws via prefix in app.py
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     _clients.add(websocket)
