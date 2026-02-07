@@ -40,6 +40,7 @@ class BrowserManager:
                 "--no-sandbox",
                 "--disable-gpu",
                 "--start-maximized",
+                "--disable-blink-features=AutomationControlled",
             ],
         )
 

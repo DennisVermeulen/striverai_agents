@@ -29,7 +29,7 @@ def task(
         if max_steps:
             body["max_steps"] = max_steps
 
-        resp = client.post("/task", json=body)
+        resp = client.post("/api/task", json=body)
         if resp.status_code == 409:
             typer.echo("Error: A task is already running.", err=True)
             raise typer.Exit(1)
@@ -47,7 +47,7 @@ def task(
 def status(task_id: str = typer.Argument(..., help="Task ID to check")):
     """Check the status of a task."""
     with _client() as client:
-        resp = client.get(f"/task/{task_id}")
+        resp = client.get(f"/api/task/{task_id}")
         resp.raise_for_status()
         data = resp.json()
         _print_status(data)
@@ -57,7 +57,7 @@ def status(task_id: str = typer.Argument(..., help="Task ID to check")):
 def cancel(task_id: str = typer.Argument(..., help="Task ID to cancel")):
     """Cancel a running task."""
     with _client() as client:
-        resp = client.post(f"/task/{task_id}/cancel")
+        resp = client.post(f"/api/task/{task_id}/cancel")
         resp.raise_for_status()
         typer.echo(f"Task {task_id} cancelled.")
 
@@ -66,7 +66,7 @@ def cancel(task_id: str = typer.Argument(..., help="Task ID to cancel")):
 def screenshot(output: str = typer.Option("screenshot.png", "--output", "-o", help="Output file")):
     """Save a screenshot of the current browser state."""
     with _client() as client:
-        resp = client.get("/screenshot")
+        resp = client.get("/api/screenshot")
         resp.raise_for_status()
         with open(output, "wb") as f:
             f.write(resp.content)
@@ -77,7 +77,7 @@ def screenshot(output: str = typer.Option("screenshot.png", "--output", "-o", he
 def navigate(url: str = typer.Argument(..., help="URL to navigate to")):
     """Navigate the browser to a URL."""
     with _client() as client:
-        resp = client.post("/navigate", json={"url": url})
+        resp = client.post("/api/navigate", json={"url": url})
         resp.raise_for_status()
         typer.echo(f"Navigated to {url}")
 
@@ -86,7 +86,7 @@ def navigate(url: str = typer.Argument(..., help="URL to navigate to")):
 def save_session():
     """Save the current browser session (cookies/localStorage)."""
     with _client() as client:
-        resp = client.post("/session/save")
+        resp = client.post("/api/session/save")
         resp.raise_for_status()
         typer.echo(f"Session saved: {resp.json()['path']}")
 
@@ -97,7 +97,7 @@ def _follow_task(client: httpx.Client, task_id: str) -> None:
     idx = 0
 
     while True:
-        resp = client.get(f"/task/{task_id}")
+        resp = client.get(f"/api/task/{task_id}")
         resp.raise_for_status()
         data = resp.json()
 

@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2-vision"
 
     # Browser
-    browser_width: int = 1280
-    browser_height: int = 800
+    browser_width: int = 1920
+    browser_height: int = 1080
     screenshot_max_dimension: int = 1568
 
     # Agent
@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     sessions_dir: Path = Path("/app/data/sessions")
     screenshots_dir: Path = Path("/app/data/screenshots")
     logs_dir: Path = Path("/app/data/logs")
+    workflows_dir: Path = Path("/app/data/workflows")
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

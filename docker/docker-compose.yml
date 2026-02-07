@@ -11,6 +11,7 @@ services:
       - ../data/sessions:/app/data/sessions
       - ../data/screenshots:/app/data/screenshots
       - ../data/logs:/app/data/logs
+      - ../data/workflows:/app/data/workflows
     env_file:
       - ../.env
     environment:

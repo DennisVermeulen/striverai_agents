@@ -1,0 +1,62 @@
+name: gmail-send
+description: Compose and send an email via Gmail
+recorded_at: "2026-02-06T23:00:00+00:00"
+start_url: https://mail.google.com/mail/u/0/#inbox
+steps:
+- action: click
+  description: Click the 'Opstellen' (Compose) button in the left sidebar
+  coordinates: [155, 89]
+  element:
+    tag: div
+    text: Opstellen
+    role: button
+
+- action: type
+  description: Type recipient email address in the 'Aan' (To) field
+  text: dennis@striverai.nl
+  element:
+    tag: input
+    aria_label: Aan ontvangers
+    role: combobox
+    input_type: text
+
+- action: key
+  description: Press Tab to confirm the recipient
+  key: Tab
+
+- action: type
+  description: Type email subject
+  text: Test vanuit Local Agent
+  element:
+    tag: input
+    aria_label: Onderwerp
+    placeholder: Onderwerp
+    name: subjectbox
+
+- action: click
+  description: Click the message body field
+  coordinates: [393, 402]
+  element:
+    tag: div
+    aria_label: Berichttekst
+    role: textbox
+    contenteditable: true
+
+- action: type
+  description: Type the email body text
+  text: Dit is een test email verzonden via de Local Agent workflow replay.
+  element:
+    tag: div
+    aria_label: Berichttekst
+    role: textbox
+    contenteditable: true
+
+- action: click
+  description: Click the 'Sturen' (Send) button
+  coordinates: [332, 765]
+  element:
+    tag: div
+    text: Sturen
+    aria_label: "Sturen \u202A(Ctrl-Enter)\u202C"
+    role: button
+    tooltip: "Sturen \u202A(Ctrl-Enter)\u202C"
