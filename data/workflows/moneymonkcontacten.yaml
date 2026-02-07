@@ -1,0 +1,137 @@
+name: moneymonkcontacten
+description: ''
+recorded_at: '2026-02-07T00:50:13.555763+00:00'
+start_url: https://app.moneymonk.nl/v2/administrations/92661/contacts/2111212
+steps:
+- action: click
+  description: Click 'Contact toevoegen...'
+  coordinates:
+  - 1064
+  - 109
+  element:
+    tag: span
+    text: Contact toevoegen...
+    parent_context: main
+- action: type
+  description: Type 'asml' in input
+  text: asml
+  element:
+    tag: input
+    name: companyName
+    input_type: text
+    label: Bedrijfsnaam *
+- action: click
+  description: Click 'De Run,Veldhoven'
+  coordinates:
+  - 845
+  - 278
+  element:
+    tag: div
+    text: De Run,Veldhoven
+- action: type
+  description: Type 'Henk' in 'Type naam...' field
+  text: Henk
+  element:
+    tag: input
+    placeholder: Type naam...
+    name: toTheAttentionOf
+    input_type: text
+    label: Ter attentie van
+- action: click
+  description: Click '+31 6 000 00 000' field
+  coordinates:
+  - 1039
+  - 297
+  element:
+    tag: input
+    placeholder: +31 6 000 00 000
+    name: phoneNumber
+    input_type: text
+    label: Telefoonnummer
+- action: type
+  description: Type '06123456789' in '+31 6 000 00 000' field
+  text: 06123456789
+  element:
+    tag: input
+    placeholder: +31 6 000 00 000
+    name: phoneNumber
+    input_type: text
+    label: Telefoonnummer
+- action: click
+  description: Click 'Type e-mailadres' field
+  coordinates:
+  - 878
+  - 364
+  element:
+    tag: input
+    placeholder: Type e-mailadres
+    name: emailAddress
+    input_type: email
+    label: E-mailadres
+- action: type
+  description: Type 'henknootjes@gmail.com' in 'Type e-mailadres' field
+  text: henknootjes@gmail.com
+  element:
+    tag: input
+    placeholder: Type e-mailadres
+    name: emailAddress
+    input_type: email
+    label: E-mailadres
+- action: click
+  description: Click 'www.domein.nl' field
+  coordinates:
+  - 1083
+  - 372
+  element:
+    tag: input
+    placeholder: www.domein.nl
+    name: website
+    input_type: text
+    label: Website
+- action: type
+  description: Type 'www.asml.nl' in 'www.domein.nl' field
+  text: www.asml.nl
+  element:
+    tag: input
+    placeholder: www.domein.nl
+    name: website
+    input_type: text
+    label: Website
+- action: click
+  description: Click 'NL123456789B01' field
+  coordinates:
+  - 886
+  - 438
+  element:
+    tag: input
+    placeholder: NL123456789B01
+    name: vatNumber
+    input_type: text
+    label: Btw-nummer
+- action: type
+  description: Type 'NL123456543' in 'NL123456789B01' field
+  text: NL123456543
+  element:
+    tag: input
+    placeholder: NL123456789B01
+    name: vatNumber
+    input_type: text
+    label: Btw-nummer
+- action: click
+  description: Click input
+  coordinates:
+  - 1044
+  - 463
+  element:
+    tag: input
+    name: contactNumber
+    input_type: text
+    label: Contactnummer
+- action: click
+  description: Click 'Contact toevoegen'
+  coordinates:
+  - 1100
+  - 754
+  element:
+    tag: span
+    text: Contact toevoegen

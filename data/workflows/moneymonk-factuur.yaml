@@ -1,0 +1,110 @@
+name: moneymonk-factuur
+description: Maak een factuur aan in MoneyMonk (geparametriseerd voor batch)
+recorded_at: "2026-02-07T01:02:59+00:00"
+start_url: https://app.moneymonk.nl/v2/administrations/92661/sales-books/invoices
+parameters:
+- name: klant
+  label: Klantnaam
+- name: omschrijving
+  label: Omschrijving factuurregel
+- name: bedrag
+  label: Bedrag (in centen, bijv. 10000 = €100)
+
+steps:
+# 1. Klik op "Factuur toevoegen..."
+- action: click
+  description: Klik op 'Factuur toevoegen...'
+  coordinates: [1030, 168]
+  element:
+    tag: span
+    text: Factuur toevoegen...
+    parent_context: main
+
+# 2. Klik op klant dropdown (het pijltje/icoon)
+- action: click
+  description: Klik op klant dropdown
+  coordinates: [599, 297]
+  element:
+    tag: path
+
+# 3. Type klantnaam om de lijst te filteren
+- action: type
+  description: Type klantnaam om te zoeken
+  text: "{{klant}}"
+  element:
+    tag: input
+
+# 4. Klik op eerste gefilterde klantsuggestie
+- action: click
+  description: Selecteer eerste zoekresultaat
+  coordinates: [473, 432]
+  element:
+    tag: div
+
+# 4. Klik op template dropdown
+- action: click
+  description: Klik op template dropdown
+  coordinates: [960, 302]
+  element:
+    tag: div
+
+# 5. Selecteer Standaardsjabloon
+- action: click
+  description: Selecteer 'Standaardsjabloon'
+  coordinates: [917, 343]
+  element:
+    tag: div
+    text: Standaardsjabloon
+    role: option
+
+# 6. Klik op omschrijving veld
+- action: click
+  description: Klik op omschrijving veld
+  coordinates: [1268, 233]
+  element:
+    tag: div
+
+# 7. Type omschrijving
+- action: type
+  description: Type omschrijving voor factuurregel
+  text: "{{omschrijving}}"
+  element:
+    tag: textarea
+    placeholder: Omschrijving...
+    name: lines.0.description
+
+# 8. Klik op bedrag veld
+- action: click
+  description: Klik op bedrag veld
+  coordinates: [1025, 463]
+  element:
+    tag: input
+    placeholder: "0.00"
+    name: lines.0.unconvertedAmountInCents
+    input_type: text
+
+# 9. Type bedrag
+- action: type
+  description: Type bedrag
+  text: "{{bedrag}}"
+  element:
+    tag: input
+    placeholder: "0.00"
+    name: lines.0.unconvertedAmountInCents
+    input_type: text
+
+# 10. Klik op "Factuur vastleggen"
+- action: click
+  description: Klik op 'Factuur vastleggen'
+  coordinates: [1012, 729]
+  element:
+    tag: span
+    text: Factuur vastleggen
+
+# 11. Bevestig met "Ja, factuur vastleggen"
+- action: click
+  description: Klik op 'Ja, factuur vastleggen'
+  coordinates: [763, 320]
+  element:
+    tag: span
+    text: Ja, factuur vastleggen

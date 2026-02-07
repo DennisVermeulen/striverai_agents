@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     app.state.browser = browser_manager
     app.state.screenshot = screenshot_capture
     app.state.tasks = {}  # task_id -> TaskState
+    app.state.batches = {}  # batch_id -> BatchState
     app.state.recorder = None  # BrowserRecorder | None
 
     logger.info("App started — browser ready")

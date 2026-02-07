@@ -1,0 +1,93 @@
+name: moneymonkfactuur
+description: ''
+recorded_at: '2026-02-07T01:02:59.228158+00:00'
+start_url: https://app.moneymonk.nl/v2/administrations/92661/sales-books/invoices/10726352
+steps:
+- action: click
+  description: Click 'Factuur toevoegen...'
+  coordinates:
+  - 1030
+  - 168
+  element:
+    tag: span
+    text: Factuur toevoegen...
+    parent_context: main
+- action: click
+  description: Click path
+  coordinates:
+  - 599
+  - 297
+  element:
+    tag: path
+- action: click
+  description: Click 'ASML Trading B.V.'
+  coordinates:
+  - 473
+  - 432
+  element:
+    tag: div
+    text: ASML Trading B.V.
+- action: click
+  description: Click div
+  coordinates:
+  - 960
+  - 302
+  element:
+    tag: div
+- action: click
+  description: Click 'Standaardsjabloon'
+  coordinates:
+  - 917
+  - 343
+  element:
+    tag: div
+    text: Standaardsjabloon
+    role: option
+- action: click
+  description: Click div
+  coordinates:
+  - 1268
+  - 233
+  element:
+    tag: div
+- action: type
+  description: Type 'Chips ' in 'Omschrijving...' field
+  text: 'Chips '
+  element:
+    tag: textarea
+    placeholder: Omschrijving...
+    name: lines.0.description
+- action: click
+  description: Click '0.00' field
+  coordinates:
+  - 1025
+  - 463
+  element:
+    tag: input
+    placeholder: '0.00'
+    name: lines.0.unconvertedAmountInCents
+    input_type: text
+- action: type
+  description: Type '10000' in '0.00' field
+  text: '10000'
+  element:
+    tag: input
+    placeholder: '0.00'
+    name: lines.0.unconvertedAmountInCents
+    input_type: text
+- action: click
+  description: Click 'Factuur vastleggen'
+  coordinates:
+  - 1012
+  - 729
+  element:
+    tag: span
+    text: Factuur vastleggen
+- action: click
+  description: Click 'Ja, factuur vastleggen'
+  coordinates:
+  - 763
+  - 320
+  element:
+    tag: span
+    text: Ja, factuur vastleggen

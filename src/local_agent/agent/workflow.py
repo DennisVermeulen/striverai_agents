@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +10,34 @@ import yaml
 
 from local_agent.config import settings
 from local_agent.utils.logging import logger
+
+
+@dataclass
+class WorkflowParameter:
+    name: str          # variable name, e.g. "project_naam"
+    label: str = ""    # UI label, e.g. "Projectnaam"
+    default: str = ""  # default value (empty string = required)
+
+    def to_dict(self) -> dict:
+        d: dict = {"name": self.name}
+        if self.label:
+            d["label"] = self.label
+        if self.default:
+            d["default"] = self.default
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> WorkflowParameter:
+        return cls(
+            name=data["name"],
+            label=data.get("label", ""),
+            default=data.get("default", ""),
+        )
+
+
+def _resolve_text(template: str, params: dict[str, str]) -> str:
+    """Replace {{var_name}} placeholders with values from params dict."""
+    return re.sub(r'\{\{(\w+)\}\}', lambda m: params.get(m.group(1), m.group(0)), template)
 
 
 @dataclass
@@ -108,29 +138,34 @@ class Workflow:
     description: str = ""
     start_url: str = ""
     steps: list[WorkflowStep] = field(default_factory=list)
+    parameters: list[WorkflowParameter] = field(default_factory=list)
     recorded_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
 
     def to_yaml(self) -> str:
-        data = {
+        data: dict = {
             "name": self.name,
             "description": self.description,
             "recorded_at": self.recorded_at,
             "start_url": self.start_url,
-            "steps": [s.to_dict() for s in self.steps],
         }
+        if self.parameters:
+            data["parameters"] = [p.to_dict() for p in self.parameters]
+        data["steps"] = [s.to_dict() for s in self.steps]
         return yaml.dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
     @classmethod
     def from_yaml(cls, content: str) -> Workflow:
         data = yaml.safe_load(content)
         steps = [WorkflowStep.from_dict(s) for s in data.get("steps", [])]
+        params = [WorkflowParameter.from_dict(p) for p in data.get("parameters", [])]
         return cls(
             name=data["name"],
             description=data.get("description", ""),
             start_url=data.get("start_url", ""),
             steps=steps,
+            parameters=params,
             recorded_at=data.get("recorded_at", ""),
         )
 
@@ -160,6 +195,39 @@ class Workflow:
             "Do not add extra steps that were not listed."
         )
         return "\n".join(lines)
+
+    def resolve(self, params: dict[str, str]) -> Workflow:
+        """Return a copy with all {{var}} placeholders resolved using params.
+
+        Raises ValueError if required parameters (no default) are missing.
+        """
+        self.validate_parameters(params)
+
+        # Merge defaults with provided params
+        merged = {p.name: p.default for p in self.parameters if p.default}
+        merged.update(params)
+
+        resolved = copy.deepcopy(self)
+        resolved.parameters = []  # resolved workflow has no more placeholders
+        for step in resolved.steps:
+            if step.text:
+                step.text = _resolve_text(step.text, merged)
+            if step.url:
+                step.url = _resolve_text(step.url, merged)
+            if step.description:
+                step.description = _resolve_text(step.description, merged)
+        if resolved.start_url:
+            resolved.start_url = _resolve_text(resolved.start_url, merged)
+        return resolved
+
+    def validate_parameters(self, params: dict[str, str]) -> None:
+        """Check that all required parameters (no default) have a value."""
+        missing = [
+            p.name for p in self.parameters
+            if not p.default and p.name not in params
+        ]
+        if missing:
+            raise ValueError(f"Missing required parameters: {', '.join(missing)}")
 
     @staticmethod
     def _step_to_instruction(num: int, step: WorkflowStep) -> str:

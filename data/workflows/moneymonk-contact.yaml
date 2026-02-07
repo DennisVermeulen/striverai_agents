@@ -1,0 +1,156 @@
+name: moneymonk-contact
+description: Voeg een contact toe in MoneyMonk (geparametriseerd voor batch)
+recorded_at: "2026-02-07T01:00:00+00:00"
+start_url: https://app.moneymonk.nl/v2/administrations/92661/contacts
+parameters:
+- name: bedrijfsnaam
+  label: Bedrijfsnaam
+- name: contactpersoon
+  label: Contactpersoon (t.a.v.)
+  default: ""
+- name: telefoon
+  label: Telefoonnummer
+  default: ""
+- name: email
+  label: E-mailadres
+  default: ""
+- name: website
+  label: Website
+  default: ""
+- name: btw_nummer
+  label: Btw-nummer
+  default: ""
+steps:
+# 1. Klik op "Contact toevoegen..."
+- action: click
+  description: Klik op 'Contact toevoegen...'
+  coordinates: [1064, 109]
+  element:
+    tag: span
+    text: Contact toevoegen...
+    parent_context: main
+
+# 2. Type bedrijfsnaam
+- action: type
+  description: Type bedrijfsnaam in het veld
+  text: "{{bedrijfsnaam}}"
+  element:
+    tag: input
+    name: companyName
+    input_type: text
+    label: Bedrijfsnaam *
+
+# 3. Wacht even op autocomplete dropdown en klik eerste suggestie
+- action: click
+  description: Klik op eerste KvK-suggestie
+  coordinates: [845, 278]
+  element:
+    tag: div
+    parent_context: main
+
+# 4. Type contactpersoon (t.a.v.)
+- action: type
+  description: Type contactpersoon in 'Ter attentie van' veld
+  text: "{{contactpersoon}}"
+  element:
+    tag: input
+    placeholder: Type naam...
+    name: toTheAttentionOf
+    input_type: text
+    label: Ter attentie van
+
+# 5. Klik op telefoonnummer veld
+- action: click
+  description: Klik op telefoonnummer veld
+  coordinates: [1039, 297]
+  element:
+    tag: input
+    placeholder: "+31 6 000 00 000"
+    name: phoneNumber
+    input_type: text
+    label: Telefoonnummer
+
+# 6. Type telefoonnummer
+- action: type
+  description: Type telefoonnummer
+  text: "{{telefoon}}"
+  element:
+    tag: input
+    placeholder: "+31 6 000 00 000"
+    name: phoneNumber
+    input_type: text
+    label: Telefoonnummer
+
+# 7. Klik op email veld
+- action: click
+  description: Klik op e-mailadres veld
+  coordinates: [878, 364]
+  element:
+    tag: input
+    placeholder: Type e-mailadres
+    name: emailAddress
+    input_type: email
+    label: E-mailadres
+
+# 8. Type email
+- action: type
+  description: Type e-mailadres
+  text: "{{email}}"
+  element:
+    tag: input
+    placeholder: Type e-mailadres
+    name: emailAddress
+    input_type: email
+    label: E-mailadres
+
+# 9. Klik op website veld
+- action: click
+  description: Klik op website veld
+  coordinates: [1083, 372]
+  element:
+    tag: input
+    placeholder: www.domein.nl
+    name: website
+    input_type: text
+    label: Website
+
+# 10. Type website
+- action: type
+  description: Type website
+  text: "{{website}}"
+  element:
+    tag: input
+    placeholder: www.domein.nl
+    name: website
+    input_type: text
+    label: Website
+
+# 11. Klik op btw-nummer veld
+- action: click
+  description: Klik op btw-nummer veld
+  coordinates: [886, 438]
+  element:
+    tag: input
+    placeholder: NL123456789B01
+    name: vatNumber
+    input_type: text
+    label: Btw-nummer
+
+# 12. Type btw-nummer
+- action: type
+  description: Type btw-nummer
+  text: "{{btw_nummer}}"
+  element:
+    tag: input
+    placeholder: NL123456789B01
+    name: vatNumber
+    input_type: text
+    label: Btw-nummer
+
+# 13. Klik op "Contact toevoegen" knop
+- action: click
+  description: Klik op 'Contact toevoegen' knop
+  coordinates: [1100, 754]
+  element:
+    tag: span
+    text: Contact toevoegen

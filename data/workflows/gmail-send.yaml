@@ -2,6 +2,14 @@ name: gmail-send
 description: Compose and send an email via Gmail
 recorded_at: "2026-02-06T23:00:00+00:00"
 start_url: https://mail.google.com/mail/u/0/#inbox
+parameters:
+- name: ontvanger
+  label: Ontvanger email
+- name: onderwerp
+  label: Onderwerp
+  default: Test vanuit Local Agent
+- name: bericht
+  label: Bericht tekst
 steps:
 - action: click
   description: Click the 'Opstellen' (Compose) button in the left sidebar
@@ -13,7 +21,7 @@ steps:
 
 - action: type
   description: Type recipient email address in the 'Aan' (To) field
-  text: dennis@striverai.nl
+  text: "{{ontvanger}}"
   element:
     tag: input
     aria_label: Aan ontvangers
@@ -26,7 +34,7 @@ steps:
 
 - action: type
   description: Type email subject
-  text: Test vanuit Local Agent
+  text: "{{onderwerp}}"
   element:
     tag: input
     aria_label: Onderwerp
@@ -44,7 +52,7 @@ steps:
 
 - action: type
   description: Type the email body text
-  text: Dit is een test email verzonden via de Local Agent workflow replay.
+  text: "{{bericht}}"
   element:
     tag: div
     aria_label: Berichttekst
