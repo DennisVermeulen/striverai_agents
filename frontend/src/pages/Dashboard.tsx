@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, connectWs, type TaskStatusResponse, type WsEvent } from "../api";
+import { api, connectWs, type BatchResponse, type TaskStatusResponse, type WsEvent } from "../api";
 import TaskForm from "../components/TaskForm";
 import TaskStatus from "../components/TaskStatus";
 import ActionLog from "../components/ActionLog";
@@ -7,6 +7,7 @@ import BrowserView from "../components/BrowserView";
 import Screenshot from "../components/Screenshot";
 import RecordButton from "../components/RecordButton";
 import WorkflowList from "../components/WorkflowList";
+import BatchProgress from "../components/BatchProgress";
 
 export default function Dashboard() {
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -14,8 +15,11 @@ export default function Dashboard() {
   const [events, setEvents] = useState<WsEvent[]>([]);
   const [viewMode, setViewMode] = useState<"vnc" | "screenshot">("vnc");
   const [workflowRefresh, setWorkflowRefresh] = useState(0);
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [batch, setBatch] = useState<BatchResponse | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Connect WebSocket on mount
   useEffect(() => {
@@ -23,7 +27,7 @@ export default function Dashboard() {
       setEvents((prev) => [...prev, event]);
 
       // Auto-update task status from WS events
-      if (event.task_id && event.status) {
+      if (event.type === "task_status" && event.task_id && event.status) {
         setTask((prev) =>
           prev && prev.task_id === event.task_id
             ? {
@@ -36,6 +40,20 @@ export default function Dashboard() {
               }
             : prev
         );
+      }
+
+      // Auto-update batch from WS events
+      if (event.type === "batch_progress" && event.batch_id) {
+        setBatch((prev) => {
+          if (!prev || prev.batch_id !== event.batch_id) return prev;
+          return {
+            ...prev,
+            status: (event.status as string) ?? prev.status,
+            current_index: event.current_index ?? prev.current_index,
+            completed: event.completed ?? prev.completed,
+            failed: event.failed ?? prev.failed,
+          };
+        });
       }
     });
     wsRef.current = ws;
@@ -65,10 +83,41 @@ export default function Dashboard() {
     };
   }, [taskId]);
 
+  // Poll batch status while running
+  useEffect(() => {
+    if (!batchId) return;
+
+    const poll = async () => {
+      try {
+        const res = await api.getBatch(batchId);
+        setBatch(res);
+        if (res.status !== "running" && res.status !== "pending") {
+          if (batchPollRef.current) clearInterval(batchPollRef.current);
+        }
+      } catch {
+        // Batch may not exist yet
+      }
+    };
+
+    poll();
+    batchPollRef.current = setInterval(poll, 2000);
+    return () => {
+      if (batchPollRef.current) clearInterval(batchPollRef.current);
+    };
+  }, [batchId]);
+
   const handleTaskStarted = useCallback((id: string) => {
     setTaskId(id);
     setEvents([]);
     setTask(null);
+  }, []);
+
+  const handleBatchStarted = useCallback((id: string) => {
+    setBatchId(id);
+    setBatch(null);
+    setEvents([]);
+    setTask(null);
+    setTaskId(null);
   }, []);
 
   const handleCancel = useCallback(async () => {
@@ -77,7 +126,14 @@ export default function Dashboard() {
     }
   }, [taskId]);
 
+  const handleBatchCancel = useCallback(async () => {
+    if (batchId) {
+      await api.cancelBatch(batchId);
+    }
+  }, [batchId]);
+
   const isRunning = task?.status === "running" || task?.status === "pending";
+  const isBatchRunning = batch?.status === "running" || batch?.status === "pending";
 
   // Determine noVNC URL — same host, port 6080
   const noVncUrl = `${location.protocol}//${location.hostname}:6080`;
@@ -91,8 +147,18 @@ export default function Dashboard() {
           {/* Task Form */}
           <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
             <h2 className="text-sm font-medium text-gray-300 mb-3">New Task</h2>
-            <TaskForm onTaskStarted={handleTaskStarted} disabled={isRunning} />
+            <TaskForm onTaskStarted={handleTaskStarted} disabled={isRunning || isBatchRunning} />
           </div>
+
+          {/* Batch Progress */}
+          {batch && (
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
+              <h2 className="text-sm font-medium text-gray-300 mb-3">
+                Batch Progress
+              </h2>
+              <BatchProgress batch={batch} onCancel={handleBatchCancel} />
+            </div>
+          )}
 
           {/* Task Status */}
           {task && (
@@ -110,7 +176,7 @@ export default function Dashboard() {
               Record &amp; Replay
             </h2>
             <RecordButton
-              disabled={isRunning}
+              disabled={isRunning || isBatchRunning}
               onWorkflowSaved={() => setWorkflowRefresh((n) => n + 1)}
             />
           </div>
@@ -122,6 +188,7 @@ export default function Dashboard() {
             </h2>
             <WorkflowList
               onTaskStarted={handleTaskStarted}
+              onBatchStarted={handleBatchStarted}
               refreshTrigger={workflowRefresh}
             />
           </div>
